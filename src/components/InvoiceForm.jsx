@@ -2,6 +2,7 @@ import { Calendar } from "lucide-react";
 import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from "react-redux";
 import {
   addHistory,
@@ -16,6 +17,9 @@ import {
   updateItem,
 } from "../redux/slices/invoiceSlice";
 
+
+// for toast
+const notify = () => toast("Added Successfully");
 const InvoiceForm = () => {
   const dispatch = useDispatch();
   const [taxMode, setTaxMode] = useState("exclusive"); // i have set defacult exclusive
@@ -90,9 +94,20 @@ const InvoiceForm = () => {
   };
 
   const handleSave = () => {
+
+    toast.success('Data saved successfully!', {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
     const itemDetails = items
       .map((item) => `${item.item || "Item"} (${item.account || "No Account"})`)
       .join(", ");
+
 
     const newHistory = {
       date: new Date(),
@@ -102,6 +117,7 @@ const InvoiceForm = () => {
     dispatch(addHistory(newHistory));
     const nextInvoiceNumber = incrementInvoiceNumber(invoiceNumber);
     dispatch(setInvoiceNumber(nextInvoiceNumber));
+
   };
 
   const displayValue = (value) => {
@@ -153,6 +169,10 @@ const InvoiceForm = () => {
     dispatch(calculateTotals());
   };
   return (
+    
+    <>
+
+    <ToastContainer></ToastContainer>
     <div className="bg-white min-h-screen p-6 ">
       {/* Header Section */}
       <div className="max-w-7xl mx-auto">
@@ -437,6 +457,7 @@ const InvoiceForm = () => {
           <button
             onClick={handleSave}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            
           >
             Save
           </button>
@@ -462,6 +483,7 @@ const InvoiceForm = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
