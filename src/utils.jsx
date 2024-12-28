@@ -7,95 +7,80 @@ export const incrementInvoiceNumber = (currentNumber) => {
 
 export const calculateItemAmount = (item, taxMode) => {
   const qty = item.qty === "" ? 0 : Number(item.qty);
-  console.log("QTY", qty);
   const unitPrice = item.unitPrice === "" ? 0 : Number(item.unitPrice);
-  console.log("unitPrice", unitPrice);
   const disc = item.disc === "" ? 0 : Number(item.disc);
-  console.log("disc", disc);
   const baseAmount = qty * unitPrice * (1 - disc / 100);
-  console.log("baseAmount", baseAmount);
-
-  // if (taxMode === "inclusive" && item.taxRate > 0) {
-  //   // For tax-inclusive: amount includes tax, so we need to calculate pre-tax amount
-  //   const taxMultiplier = 1 + item.taxRate / 100;
-  //   console.log("taxMultiplier", taxMultiplier);
-  //   const result = (baseAmount / taxMultiplier).toFixed(2);
-  //   console.log("result", result);
-  //   return result;
-  // } else {
-    // For tax-exclusive or no-tax: amount is pre-tax
-    console.log("FROM ELSE ", baseAmount.toFixed(2));
-    return baseAmount.toFixed(2);
-  // }
-};
-
-export const calculateItemTaxAmount = (item, taxMode) => {
-  const qty = item.qty === "" ? 0 : Number(item.qty);
-  console.log("QTY", qty);
-  const unitPrice = item.unitPrice === "" ? 0 : Number(item.unitPrice);
-  console.log("unitPrice", unitPrice);
-  const disc = item.disc === "" ? 0 : Number(item.disc);
-  console.log("disc", disc);
-  const baseAmount = qty * unitPrice * (1 - disc / 100);
-  console.log("baseAmount", baseAmount);
 
   if (taxMode === "inclusive" && item.taxRate > 0) {
-    // For tax-inclusive: amount includes tax, so we need to calculate pre-tax amount
-    const taxMultiplier = 1 + item.taxRate / 100;
-    console.log("taxMultiplier", taxMultiplier);
-    const result = (baseAmount / taxMultiplier).toFixed(2);
-    console.log("result", result);
-    return result;
+   
+    const taxMultiplier = 1 + (item.taxRate / 100);
+    return baseAmount.toFixed(2); 
   } else {
-    // For tax-exclusive or no-tax: amount is pre-tax
-    console.log("FROM ELSE ", baseAmount.toFixed(2));
+    
     return baseAmount.toFixed(2);
   }
 };
 
-export const calculateTotalTax = (items, taxMode) => {
+export const calculateItemTax = (item, taxMode) => {
   if (taxMode === "no-tax") return 0;
-  let result = [];
-  if (items) {
-    result = items.reduce(
-      (acc, item) => acc + calculateItemTax(item, taxMode),
-      0
-    );
+
+  const qty = item.qty === "" ? 0 : Number(item.qty);
+  const unitPrice = item.unitPrice === "" ? 0 : Number(item.unitPrice);
+  const disc = item.disc === "" ? 0 : Number(item.disc);
+  const baseAmount = qty * unitPrice * (1 - disc / 100);
+  const taxRate = item.taxRate / 100;
+
+  if (taxMode === "inclusive" && item.taxRate > 0) {
+    
+    return (baseAmount - (baseAmount / (1 + taxRate))).toFixed(2);
+  } else if (taxMode === "exclusive") {
+    
+    return (baseAmount * taxRate).toFixed(2);
   }
-  return result;
+  return 0;
 };
 
 export const calculateSubtotal = (items, taxMode) => {
-  let result = [];
-  console.log("CALLINGGGGGGGGGGGGGGGGGG SUBTOTALLLLLLLLLLLLLLLL");
-  if (items) {
-    result = items.reduce(
-      (acc, item) => acc + parseFloat(calculateItemAmount(item, taxMode)),
-      0
-    );
-    console.log("RESULTTTTTTTTTTTTTTTTTTTTTTTTTTT",result)
-  }
-  return result;
+  if (!items) return 0;
+
+  return items.reduce((acc, item) => {
+    const amount = parseFloat(calculateItemAmount(item, taxMode));
+    if (taxMode === "inclusive" && item.taxRate > 0) {
+     
+      const taxRate = item.taxRate / 100;
+      return acc + (amount / (1 + taxRate));
+    }
+    return acc + amount;
+  }, 0);
 };
 
-export const displayValue = (value) => {
-  return value === "" || value === null ? "" : value.toString();
+export const calculateTotalTax = (items, taxMode) => {
+  if (!items || taxMode === "no-tax") return 0;
+
+  return items.reduce((acc, item) => {
+    const tax = parseFloat(calculateItemTax(item, taxMode));
+    return acc + tax;
+  }, 0);
 };
 
 export const calculateGrandTotal = (items, taxMode) => {
   const subTotal = calculateSubtotal(items, taxMode);
   const totalTax = calculateTotalTax(items, taxMode);
-  const result = (
-    (parseFloat(subTotal) || 0) + (parseFloat(totalTax) || 0)
-  ).toFixed(2);
-  return result;
+  
+  if (taxMode === "inclusive") {
+   
+    return parseFloat(subTotal + totalTax).toFixed(2);
+  } else if (taxMode === "exclusive") {
+    
+    return (parseFloat(subTotal) + parseFloat(totalTax)).toFixed(2);
+  } else {
+   
+    return parseFloat(subTotal).toFixed(2);
+  }
 };
 
-export const calculateItemTax = (item, taxMode) => {
-  // const amount = parseFloat(calculateItemAmount(item, taxMode));
-  const taxAmount = parseFloat(calculateItemTaxAmount(item, taxMode));
-  if (taxMode === "no-tax") return 0;
-  return taxAmount * (item.taxRate / 100);
+export const displayValue = (value) => {
+  return value === "" || value === null ? "" : value.toString();
 };
 
 export const accountOptions = [

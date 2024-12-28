@@ -37,6 +37,8 @@ const invoiceSlice = createSlice({
       }
     },
     calculateTotals: (state) => {
+     // console.log("calculateTotals",state.taxmode)
+      
       state.subtotal = state.items.reduce((sum, item) => {
         if (!item || typeof item.qty === 'undefined' || typeof item.unitPrice === 'undefined') {
           return sum;
@@ -44,10 +46,11 @@ const invoiceSlice = createSlice({
         const itemTotal = item.qty * item.unitPrice * (1 - (item.disc || 0) / 100);
         return sum + itemTotal;
       }, 0);
-      console.log("state.SUBTOTAL",state.subtotal)
+     
       
       state.tax = state.items.reduce((sum, item) => {
         if (!item || typeof item.qty === 'undefined' || typeof item.unitPrice === 'undefined') {
+         
           return sum;
         }
         const itemTotal = item.qty * item.unitPrice * (1 - (item.disc || 0) / 100);
@@ -60,7 +63,7 @@ const invoiceSlice = createSlice({
       state.date = action.payload;
     },
     setDueDate: (state, action) => {
-      console.log("STATE.DUEDATE",state.dueDate)
+      
       state.dueDate = action.payload;
     },
     setInvoiceNumber: (state, action) => {

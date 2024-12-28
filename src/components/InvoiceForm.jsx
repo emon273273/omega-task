@@ -29,9 +29,12 @@ import {
 } from "../utils";
 
 const InvoiceForm = () => {
+  const [startDate, setStartDate] = useState(null);
+
   const dispatch = useDispatch();
   const [taxMode, setTaxMode] = useState("exclusive"); // i have set defacult exclusive
   const [rawDateUpdated, setRawDateUpdated] = useState(false);
+  console.log("rawdateupdated",rawDateUpdated)
   const {
     items,
     total,
@@ -42,6 +45,7 @@ const InvoiceForm = () => {
     customer,
     history,
   } = useSelector((state) => state.invoice);
+
   const handleAddItem = () => {
     dispatch(
       addItem({
@@ -78,7 +82,6 @@ const InvoiceForm = () => {
   };
 
   const handleSave = () => {
-    //toast
     toast.success("Data saved successfully!", {
       position: "top-right",
       autoClose: 3000,
@@ -88,22 +91,30 @@ const InvoiceForm = () => {
       draggable: true,
       progress: undefined,
     });
-    const itemDetails = items
+  
+    const updatedItems = items.map((item) => ({
+      ...item,
+      total: calculateItemAmount(item, taxMode),
+    }));
+  
+    const itemDetails = updatedItems
       .map((item) => `${item.item || "Item"} (${item.account || "No Account"})`)
       .join(", ");
-
+  
+    const grandTotal = calculateGrandTotal(updatedItems, taxMode); // Calculate grand total once
     const newHistory = {
-      //  date: new Date().toISOString(),
       date: new Date(date).toLocaleDateString(),
       dueDate: new Date(dueDate).toLocaleDateString(),
-      action: `Invoice ${invoiceNumber} created for ${customer}. Amount: ₹${total}. Items: ${itemDetails} And Due Date is : ${dueDate}`,
+      total: grandTotal,
+      action: `Invoice ${invoiceNumber} created for ${customer}. Amount: ₹${grandTotal}. Items: ${itemDetails} And Due Date is: ${dueDate}${
+        reference ? ` Reference By : ${reference}` : ""
+      }`,
     };
-
+  
     dispatch(addHistory(newHistory));
     const nextInvoiceNumber = incrementInvoiceNumber(invoiceNumber);
     dispatch(setInvoiceNumber(nextInvoiceNumber));
   };
-
   const handleRawChange = (e) => {
     if (!e || !e.target || !e.target.value) return;
     const inputvalue = e.target.value.trim();
@@ -114,6 +125,8 @@ const InvoiceForm = () => {
       const daysToAdd = parseInt(match[1], 10);
 
       const newDate = new Date();
+      
+
       newDate.setDate(newDate.getDate() + daysToAdd);
       dispatch(setDueDate(newDate.toISOString()));
       // e.preventDefault(); // Prevent DatePicker's default behavior
@@ -122,9 +135,11 @@ const InvoiceForm = () => {
   };
 
   const handleTaxModeChange = (mode) => {
+    console.log("handletaxmodechange",mode)
     setTaxMode(mode);
     dispatch(calculateTotals());
   };
+
   return (
     <>
       <ToastContainer></ToastContainer>
@@ -163,9 +178,13 @@ const InvoiceForm = () => {
                 <div className="relative">
                   <DatePicker
                     selected={new Date(date)}
-                    onChange={(date) => dispatch(setDate(date.toISOString()))}
+                    onChange={(date) => {
+                      setStartDate(date);
+                      dispatch(setDate(date.toISOString()));
+                    }}
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
                     dateFormat="dd MMM yyyy"
+                    placeholderText="Hello"
                   />
                   <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </div>
@@ -176,8 +195,13 @@ const InvoiceForm = () => {
                 </label>
                 <div className="relative">
                   <DatePicker
-                    selected={new Date(dueDate)}
+                  
+                  onDayMouseEnter={()=>setRawDateUpdated(false)}
+                   selected={new Date(dueDate)}
+                   
                     onChange={(date) => {
+                      setDueDate(date);
+                      
                       if (date && !rawDateUpdated) {
                         dispatch(setDueDate(date.toISOString()));
                       }
