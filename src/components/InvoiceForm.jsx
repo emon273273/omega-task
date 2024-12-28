@@ -22,6 +22,7 @@ const notify = () => toast("Added Successfully");
 const InvoiceForm = () => {
   const dispatch = useDispatch();
   const [taxMode, setTaxMode] = useState("exclusive"); // i have set defacult exclusive
+
   const {
     items,
     total,
@@ -93,6 +94,7 @@ const InvoiceForm = () => {
   };
 
   const handleSave = () => {
+    //toast
     toast.success("Data saved successfully!", {
       position: "top-right",
       autoClose: 3000,
@@ -107,8 +109,10 @@ const InvoiceForm = () => {
       .join(", ");
 
     const newHistory = {
-      date: new Date(),
-      action: `Invoice ${invoiceNumber} created for ${customer}. Amount: ₹${total}. Items: ${itemDetails}`,
+      //  date: new Date().toISOString(),
+      date: new Date(date).toLocaleDateString(), 
+    dueDate: new Date(dueDate).toLocaleDateString(),
+      action: `Invoice ${invoiceNumber} created for ${customer}. Amount: ₹${total}. Items: ${itemDetails} And Due Date is : ${dueDate}`,
     };
 
     dispatch(addHistory(newHistory));
@@ -158,6 +162,29 @@ const InvoiceForm = () => {
     const subTotal = calculateSubtotal();
     const totalTax = calculateTotalTax();
     return subTotal + totalTax;
+  };
+
+  const handleRawChange = (e) => {
+    if (!e || !e.target || !e.target.value) return;
+    const inputvalue = e.target.value;
+    // Get the input value
+
+    const regex = /^\+?(\d+)\+?$/;
+    const match = inputvalue.match(regex);
+    console.log(match);
+    if (match) {
+      const daysToAdd = parseInt(match[1], 10);
+
+      console.log(daysToAdd);
+      const newDate = new Date();
+
+      newDate.setDate(newDate.getDate() + daysToAdd);
+      //dispatch
+
+      dispatch(setDueDate(newDate.toISOString()));
+      // e.preventDefault(); // Prevent DatePicker's default behavior
+      // e.stopPropagation();
+    }
   };
 
   const handleTaxModeChange = (mode) => {
@@ -216,11 +243,14 @@ const InvoiceForm = () => {
                 <div className="relative">
                   <DatePicker
                     selected={new Date(dueDate)}
-                    onChange={(date) =>
-                      dispatch(setDueDate(date.toISOString()))
-                    }
+                    onChange={(date) => {
+                      if (date) {
+                        dispatch(setDueDate(date.toISOString()));
+                      }
+                    }}
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
                     dateFormat="dd MMM yyyy"
+                    onChangeRaw={(e) => handleRawChange(e)}
                   />
                   <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </div>
