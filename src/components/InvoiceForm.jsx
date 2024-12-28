@@ -17,12 +17,21 @@ import {
   updateItem,
 } from "../redux/slices/invoiceSlice";
 
-// for toast
-const notify = () => toast("Added Successfully");
+import {
+  accountOptions,
+  calculateGrandTotal,
+  calculateItemAmount,
+  calculateSubtotal,
+  calculateTotalTax,
+  displayValue,
+  incrementInvoiceNumber,
+  taxOptions,
+} from "../utils";
+
 const InvoiceForm = () => {
   const dispatch = useDispatch();
   const [taxMode, setTaxMode] = useState("exclusive"); // i have set defacult exclusive
-
+  const [rawDateUpdated, setRawDateUpdated] = useState(false);
   const {
     items,
     total,
@@ -33,31 +42,6 @@ const InvoiceForm = () => {
     customer,
     history,
   } = useSelector((state) => state.invoice);
-
-  const accountOptions = [
-    "Accounts Payable",
-    "Accounts Receivable",
-    "Bank",
-    "Cash",
-    "Cost of Sales",
-    "Damage Inventory",
-    "Discount Earned",
-    "Discount Given",
-  ];
-
-  const taxOptions = [
-    { label: "Tax Exempt@0%", value: 0 },
-    { label: "Standard@10%", value: 10 },
-    { label: "GST@15%", value: 15 },
-  ];
-
-  const incrementInvoiceNumber = (currentNumber) => {
-    const prefix = "INV-";
-    const currentDigits = currentNumber.replace(prefix, "");
-    const nextNumber = String(parseInt(currentDigits) + 1).padStart(3, "0");
-    return `${prefix}${nextNumber}`;
-  };
-
   const handleAddItem = () => {
     dispatch(
       addItem({
@@ -110,8 +94,8 @@ const InvoiceForm = () => {
 
     const newHistory = {
       //  date: new Date().toISOString(),
-      date: new Date(date).toLocaleDateString(), 
-    dueDate: new Date(dueDate).toLocaleDateString(),
+      date: new Date(date).toLocaleDateString(),
+      dueDate: new Date(dueDate).toLocaleDateString(),
       action: `Invoice ${invoiceNumber} created for ${customer}. Amount: ₹${total}. Items: ${itemDetails} And Due Date is : ${dueDate}`,
     };
 
@@ -120,67 +104,17 @@ const InvoiceForm = () => {
     dispatch(setInvoiceNumber(nextInvoiceNumber));
   };
 
-  const displayValue = (value) => {
-    return value === "" || value === null ? "" : value.toString();
-  };
-
-  const calculateItemAmount = (item) => {
-    const qty = item.qty === "" ? 0 : Number(item.qty);
-    const unitPrice = item.unitPrice === "" ? 0 : Number(item.unitPrice);
-    const disc = item.disc === "" ? 0 : Number(item.disc);
-    const baseAmount = qty * unitPrice * (1 - disc / 100);
-
-    if (taxMode === "inclusive" && item.taxRate > 0) {
-      // For tax-inclusive: amount includes tax, so we need to calculate pre-tax amount
-      const taxMultiplier = 1 + item.taxRate / 100;
-      return (baseAmount / taxMultiplier).toFixed(2);
-    } else {
-      // For tax-exclusive or no-tax: amount is pre-tax
-      return baseAmount.toFixed(2);
-    }
-  };
-
-  const calculateItemTax = (item) => {
-    const amount = parseFloat(calculateItemAmount(item));
-    if (taxMode === "no-tax") return 0;
-    return amount * (item.taxRate / 100);
-  };
-
-  const calculateTotalTax = () => {
-    if (taxMode === "no-tax") return 0;
-    return items.reduce((acc, item) => acc + calculateItemTax(item), 0);
-  };
-
-  const calculateSubtotal = () => {
-    return items.reduce(
-      (acc, item) => acc + parseFloat(calculateItemAmount(item)),
-      0
-    );
-  };
-
-  const calculateGrandTotal = () => {
-    const subTotal = calculateSubtotal();
-    const totalTax = calculateTotalTax();
-    return subTotal + totalTax;
-  };
-
   const handleRawChange = (e) => {
     if (!e || !e.target || !e.target.value) return;
-    const inputvalue = e.target.value;
-    // Get the input value
+    const inputvalue = e.target.value.trim();
 
     const regex = /^\+?(\d+)\+?$/;
     const match = inputvalue.match(regex);
-    console.log(match);
     if (match) {
       const daysToAdd = parseInt(match[1], 10);
 
-      console.log(daysToAdd);
       const newDate = new Date();
-
       newDate.setDate(newDate.getDate() + daysToAdd);
-      //dispatch
-
       dispatch(setDueDate(newDate.toISOString()));
       // e.preventDefault(); // Prevent DatePicker's default behavior
       // e.stopPropagation();
@@ -244,13 +178,16 @@ const InvoiceForm = () => {
                   <DatePicker
                     selected={new Date(dueDate)}
                     onChange={(date) => {
-                      if (date) {
+                      if (date && !rawDateUpdated) {
                         dispatch(setDueDate(date.toISOString()));
                       }
                     }}
                     className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
                     dateFormat="dd MMM yyyy"
-                    onChangeRaw={(e) => handleRawChange(e)}
+                    onChangeRaw={(e) => {
+                      handleRawChange(e);
+                      setRawDateUpdated(true);
+                    }}
                   />
                   <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </div>
@@ -452,7 +389,7 @@ const InvoiceForm = () => {
                       </select>
                     </td>
                     <td className="py-2 px-4 text-right">
-                      {calculateItemAmount(item)}
+                      {calculateItemAmount(item, taxMode)}
                     </td>
                     <td className="py-2 px-4">
                       <button
@@ -482,15 +419,15 @@ const InvoiceForm = () => {
             <div className="w-72">
               <div className="flex justify-between py-2 text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span>{calculateSubtotal().toFixed(2)}</span>
+                <span>{calculateSubtotal(items, taxMode).toFixed(2)}</span>
               </div>
               <div className="flex justify-between py-2 text-sm border-b border-gray-200">
                 <span className="text-gray-600">Tax</span>
-                <span>{calculateTotalTax().toFixed(2)}</span>
+                <span>{calculateTotalTax(items, taxMode).toFixed(2)}</span>
               </div>
               <div className="flex justify-between py-3 text-lg font-medium">
                 <span>Total</span>
-                <span>{calculateGrandTotal().toFixed(2)}</span>
+                <span>{calculateGrandTotal(items, taxMode)}</span>
               </div>
             </div>
           </div>
